@@ -16,13 +16,16 @@ import (
 
 // Tool flags
 var (
-	fdsn   = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
-	fsys   = flag.Bool("sys", false, "List all tables (including system)")
+	// Default
+	fdsn = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Formats
 	fsql   = flag.Bool("sql", false, "Output in SQL format")
 	fcsv   = flag.Bool("csv", false, "Output in CSV format")
 	fjson  = flag.Bool("json", false, "Output in JSON format")
 	fjsonl = flag.Bool("jsonl", false, "Output in JSON lines format")
-	flong  = flag.Bool("long", false, "Output in long format (with additional information)")
+	// Options
+	fsys     = flag.Bool("sys", false, "Include system tables")
+	fverbose = flag.Bool("verbose", false, "Output in verbose format (with additional information)")
 )
 
 // Tool usage / description
@@ -150,7 +153,7 @@ func main() {
 			cols = []string{}
 			rows = [][]any{}
 		)
-		if *flong {
+		if *fverbose {
 			cols = []string{
 				"COLUMN_NAME",
 				"COLUMN_TYPE",

@@ -13,7 +13,9 @@ import (
 
 // Tool flags
 var (
-	fdsn   = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Default
+	fdsn = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Formats
 	fcsv   = flag.Bool("csv", false, "Output in CSV format")
 	fjson  = flag.Bool("json", false, "Output in JSON format")
 	fjsonl = flag.Bool("jsonl", false, "Output in JSON lines format")

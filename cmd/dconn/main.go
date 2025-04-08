@@ -11,7 +11,9 @@ import (
 
 // Tool flags
 var (
+	// Default
 	fdsn = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Options
 	frpc = flag.String("rpc", ":25123", "RPC server address to listen on")
 )
 

@@ -15,10 +15,13 @@ import (
 
 // Tool flags
 var (
-	fdsn   = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Default
+	fdsn = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Formats
 	fsql   = flag.Bool("sql", false, "Output in SQL format")
 	fcsv   = flag.Bool("csv", false, "Output in CSV format")
 	fjsonl = flag.Bool("jsonl", false, "Output in JSON lines format")
+	// Options
 	fwhere = flag.String("where", "", "WHERE clause")
 )
 

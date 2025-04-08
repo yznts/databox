@@ -16,7 +16,9 @@ import (
 
 // Tool flags
 var (
-	fdsn    = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Default
+	fdsn = flag.String("dsn", "", "Database connection (can be set via DSN/DATABASE/DATABASE_URL env)")
+	// Options
 	fforce  = flag.Bool("force", false, "Terminate the process, instead of graceful shutdown")
 	fexceed = flag.Bool("exceed", false, "We're killing all processes exceeding a provided duration (Go time.Duration format)")
 	fquery  = flag.Bool("query", false, "We're killing all processes for query regex")
