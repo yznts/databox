@@ -11,7 +11,7 @@ WORKDIR /src
 ADD . /src
 
 # Build
-RUN make build
+RUN go build -o bin/databox ./cmd/databox
 
 # -------------
 # runtime stage
