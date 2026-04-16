@@ -11,14 +11,14 @@ type SubCommand struct {
 
 var SubCommands = map[string]SubCommand{
 	"dsn":   {dsnFlagSet, dsnUsage, dsnDescr, dsnCmd},
-	"sql":   {sqlFlagSet, sqlUsage, sqlDescr, sqlCmd},
 	"ls":    {lsFlagSet, lsUsage, lsDescr, lsCmd},
+	"sql":   {sqlFlagSet, sqlUsage, sqlDescr, sqlCmd},
+	"cat":   {catFlagSet, catUsage, catDescr, catCmd},
 	"grep":  {grepFlagSet, grepUsage, grepDescr, grepCmd},
-	"cp":    {cpFlagSet, cpUsage, cpDescr, cpCmd},
 	"head":  {headFlagSet, headUsage, headDescr, headCmd},
 	"tail":  {tailFlagSet, tailUsage, tailDescr, tailCmd},
-	"cat":   {catFlagSet, catUsage, catDescr, catCmd},
+	"count": {countFlagSet, countUsage, countDescr, countCmd},
+	"cp":    {cpFlagSet, cpUsage, cpDescr, cpCmd},
 	"ps":    {psFlagSet, psUsage, psDescr, psCmd},
 	"kill":  {killFlagSet, killUsage, killDescr, killCmd},
-	"count": {countFlagSet, countUsage, countDescr, countCmd},
 }

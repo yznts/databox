@@ -68,16 +68,19 @@ func grepCmd() {
 
 // buildGrepQuery builds a parameterized LIKE query across all columns of a table.
 // It uses $N placeholders for PostgreSQL and ? for MySQL/SQLite.
+// For PostgreSQL, columns are cast to text so LIKE works on non-text types (e.g. integers).
 func buildGrepQuery(table string, cols []db.Column, scheme, pattern string) (string, []any) {
 	like := "%" + pattern + "%"
 	parts := make([]string, len(cols))
 	args := make([]any, len(cols))
 	for i, col := range cols {
-		ph := "?"
+		var expr string
 		if scheme == "postgres" {
-			ph = fmt.Sprintf("$%d", i+1)
+			expr = fmt.Sprintf(`"%s"::text LIKE $%d`, col.Name, i+1)
+		} else {
+			expr = `"` + col.Name + `" LIKE ?`
 		}
-		parts[i] = `"` + col.Name + `" LIKE ` + ph
+		parts[i] = expr
 		args[i] = like
 	}
 	query := fmt.Sprintf(`SELECT * FROM "%s" WHERE %s`, table, strings.Join(parts, " OR "))
