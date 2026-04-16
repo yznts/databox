@@ -13,11 +13,12 @@ import (
 
 var (
 	catFlagSet = flag.NewFlagSet("cat", flag.ExitOnError)
+	// Basic flags
+	catDsn = flagDsn(catFlagSet)
 	// Awareness flags
 	catDebug  = flagDebug(catFlagSet)
 	catNowarn = flagNowarn(catFlagSet)
 	// Data format flags
-	catDsn   = flagDsn(catFlagSet)
 	catSql   = flagSql(catFlagSet)
 	catCsv   = flagCsv(catFlagSet)
 	catJson  = flagJson(catFlagSet)

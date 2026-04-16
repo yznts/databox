@@ -13,11 +13,12 @@ import (
 
 var (
 	psFlagSet = flag.NewFlagSet("ps", flag.ExitOnError)
+	// Basic flags
+	psDsn = flagDsn(psFlagSet)
 	// Awareness flags
 	psDebug  = flagDebug(psFlagSet)
 	psNowarn = flagNowarn(psFlagSet)
 	// Data format flags
-	psDsn   = flagDsn(psFlagSet)
 	psSql   = flagSql(psFlagSet)
 	psCsv   = flagCsv(psFlagSet)
 	psJson  = flagJson(psFlagSet)

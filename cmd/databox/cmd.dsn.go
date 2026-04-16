@@ -15,11 +15,12 @@ import (
 
 var (
 	dsnFlagSet = flag.NewFlagSet("dsn", flag.ExitOnError)
+	// Basic flags
+	dsnDsn = flagDsn(dsnFlagSet)
 	// Awareness flags
 	dsnDebug  = flagDebug(dsnFlagSet)
 	dsnNowarn = flagNowarn(dsnFlagSet)
 	// Data format flags
-	dsnDsn   = flagDsn(dsnFlagSet)
 	dsnCsv   = flagCsv(dsnFlagSet)
 	dsnJson  = flagJson(dsnFlagSet)
 	dsnJsonl = flagJsonl(dsnFlagSet)

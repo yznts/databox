@@ -14,11 +14,12 @@ import (
 
 var (
 	tailFlagSet = flag.NewFlagSet("tail", flag.ExitOnError)
+	// Basic flags
+	tailDsn = flagDsn(tailFlagSet)
 	// Awareness flags
 	tailDebug  = flagDebug(tailFlagSet)
 	tailNowarn = flagNowarn(tailFlagSet)
 	// Data format flags
-	tailDsn   = flagDsn(tailFlagSet)
 	tailSql   = flagSql(tailFlagSet)
 	tailCsv   = flagCsv(tailFlagSet)
 	tailJson  = flagJson(tailFlagSet)

@@ -13,12 +13,12 @@ import (
 
 var (
 	countFlagSet = flag.NewFlagSet("count", flag.ExitOnError)
+	// Basic flags
+	countDsn   = flagDsn(countFlagSet)
 	// Awareness flags
 	countDebug  = flagDebug(countFlagSet)
 	countNowarn = flagNowarn(countFlagSet)
 	// Data format flags
-	countDsn   = flagDsn(countFlagSet)
-	countSql   = flagSql(countFlagSet)
 	countCsv   = flagCsv(countFlagSet)
 	countJson  = flagJson(countFlagSet)
 	countJsonl = flagJsonl(countFlagSet)
@@ -30,8 +30,8 @@ var (
 func countCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, dio.Config{Sql: *countSql, Csv: *countCsv, Json: *countJson, Jsonl: *countJsonl})
-		stderr = dio.Open(os.Stderr, dio.Config{Sql: *countSql, Csv: *countCsv, Json: *countJson, Jsonl: *countJsonl})
+		stdout = dio.Open(os.Stdout, dio.Config{Csv: *countCsv, Json: *countJson, Jsonl: *countJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Csv: *countCsv, Json: *countJson, Jsonl: *countJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*countDsn)
@@ -52,8 +52,5 @@ func countCmd() {
 	query := fmt.Sprintf(`SELECT COUNT(*) AS "COUNT" FROM "%s"`, table)
 	data, err := con.QueryData(query)
 	dio.AssertError(stderr, err, *countDebug, "Failed to execute query: %v")
-	if tw, ok := stdout.(dio.TableSetter); ok {
-		tw.SetTable(table)
-	}
 	stdout.WriteData(data)
 }

@@ -12,11 +12,12 @@ import (
 
 var (
 	sqlFlagSet = flag.NewFlagSet("sql", flag.ExitOnError)
+	// Basic flags
+	sqlDsn = flagDsn(sqlFlagSet)
 	// Awareness flags
 	sqlDebug  = flagDebug(sqlFlagSet)
 	sqlNowarn = flagNowarn(sqlFlagSet)
 	// Data format flags
-	sqlDsn    = flagDsn(sqlFlagSet)
 	sqlOutSql = flagSql(sqlFlagSet)
 	sqlCsv    = flagCsv(sqlFlagSet)
 	sqlJson   = flagJson(sqlFlagSet)

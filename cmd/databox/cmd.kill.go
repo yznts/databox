@@ -16,11 +16,11 @@ import (
 
 var (
 	killFlagSet = flag.NewFlagSet("kill", flag.ExitOnError)
+	// Basic flags
+	killDsn = flagDsn(killFlagSet)
 	// Awareness flags
 	killDebug  = flagDebug(killFlagSet)
 	killNowarn = flagNowarn(killFlagSet)
-	// Data format flags
-	killDsn = flagDsn(killFlagSet)
 	// Type flags
 	killForce  = killFlagSet.Bool("force", false, "Terminate the process, instead of graceful shutdown")
 	killExceed = killFlagSet.Bool("exceed", false, "Kill all processes exceeding a provided duration (Go time.Duration format)")

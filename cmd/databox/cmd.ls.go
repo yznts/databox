@@ -15,11 +15,12 @@ import (
 
 var (
 	lsFlagSet = flag.NewFlagSet("ls", flag.ExitOnError)
+	// Basic flags
+	lsDsn = flagDsn(lsFlagSet)
 	// Awareness flags
 	lsDebug  = flagDebug(lsFlagSet)
 	lsNowarn = flagNowarn(lsFlagSet)
 	// Data format flags
-	lsDsn   = flagDsn(lsFlagSet)
 	lsSql   = flagSql(lsFlagSet)
 	lsCsv   = flagCsv(lsFlagSet)
 	lsJson  = flagJson(lsFlagSet)

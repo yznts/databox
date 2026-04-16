@@ -13,11 +13,12 @@ import (
 
 var (
 	headFlagSet = flag.NewFlagSet("head", flag.ExitOnError)
+	// Basic flags
+	headDsn = flagDsn(headFlagSet)
 	// Awareness flags
 	headDebug  = flagDebug(headFlagSet)
 	headNowarn = flagNowarn(headFlagSet)
 	// Data format flags
-	headDsn   = flagDsn(headFlagSet)
 	headSql   = flagSql(headFlagSet)
 	headCsv   = flagCsv(headFlagSet)
 	headJson  = flagJson(headFlagSet)

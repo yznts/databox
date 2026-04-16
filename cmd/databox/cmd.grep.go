@@ -14,11 +14,12 @@ import (
 
 var (
 	grepFlagSet = flag.NewFlagSet("grep", flag.ExitOnError)
+	// Basic flags
+	grepDsn = flagDsn(grepFlagSet)
 	// Awareness flags
 	grepDebug  = flagDebug(grepFlagSet)
 	grepNowarn = flagNowarn(grepFlagSet)
 	// Data format flags
-	grepDsn   = flagDsn(grepFlagSet)
 	grepSql   = flagSql(grepFlagSet)
 	grepCsv   = flagCsv(grepFlagSet)
 	grepJson  = flagJson(grepFlagSet)
