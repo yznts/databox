@@ -8,7 +8,7 @@ import (
 
 // StreamParameters holds all parameters for the Stream function.
 type StreamParameters struct {
-	Con    db.Database
+	Con    db.QueryExecutor
 	Stdout DataWriter
 	Stderr DataWriter
 	Debug  bool

@@ -2,8 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 )
 
 // Connection is a wrapper around sql.DB that also stores the DSN and scheme.
@@ -95,4 +97,43 @@ func (c *Connection) QueryDataStream(query string, args ...any) (<-chan *Data, <
 		}
 	}()
 	return dataCh, errCh
+}
+
+// CreateTable builds and executes a CREATE TABLE statement from the provided columns.
+// Column types are used as-is; the caller is responsible for any type mapping
+// before invoking this method.
+func (c *Connection) CreateTable(table string, columns []Column) error {
+	var parts []string
+	var primaryKeys []string
+	var foreignKeys []string
+
+	for _, col := range columns {
+		colDef := `"` + col.Name + `"` + " " + col.Type
+		if !col.IsNullable {
+			colDef += " NOT NULL"
+		}
+		if mapped := MapDefault(col.Default, c.Scheme); mapped != nil {
+			colDef += fmt.Sprintf(" DEFAULT %v", mapped)
+		}
+		parts = append(parts, colDef)
+
+		if col.IsPrimary {
+			primaryKeys = append(primaryKeys, `"`+col.Name+`"`)
+		}
+		if col.ForeignRef != "" {
+			foreignKeys = append(foreignKeys, fmt.Sprintf(
+				"FOREIGN KEY (%s) REFERENCES %s ON UPDATE %s ON DELETE %s",
+				`"`+col.Name+`"`, col.ForeignRef, col.ForeignOnUpdate, col.ForeignOnDelete,
+			))
+		}
+	}
+
+	if len(primaryKeys) > 0 {
+		parts = append(parts, "PRIMARY KEY ("+strings.Join(primaryKeys, ", ")+")")
+	}
+	parts = append(parts, foreignKeys...)
+
+	sql := fmt.Sprintf("CREATE TABLE %s (\n  %s\n)", `"`+table+`"`, strings.Join(parts, ",\n  "))
+	_, err := c.Exec(sql)
+	return err
 }

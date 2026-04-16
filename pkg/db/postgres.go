@@ -8,19 +8,27 @@ import (
 	"github.com/yznts/zen/v3/slice"
 )
 
+// Postgres is a postgres database wrapper implementation.
+// It implements QueryExecutor, SchemaManager and ProcessManager interfaces.
 type Postgres struct {
 	*Connection
 }
 
-func (p *Postgres) GetConnection() *Connection {
-	return p.Connection
-}
+// Internals
 
 func (p *Postgres) systemSchemas() []string {
 	return []string{"pg_catalog", "information_schema"}
 }
 
-func (p *Postgres) QueryTables() ([]Table, error) {
+// QueryExecutor implementation
+
+func (p *Postgres) GetConnection() *Connection {
+	return p.Connection
+}
+
+// SchemaManager implementation
+
+func (p *Postgres) GetTables() ([]Table, error) {
 	// Query the database for the tables
 	data, err := p.QueryData("SELECT table_name,table_schema FROM information_schema.tables")
 	if err != nil {
@@ -44,7 +52,7 @@ func (p *Postgres) QueryTables() ([]Table, error) {
 	return tables, nil
 }
 
-func (p *Postgres) QueryColumns(table string) ([]Column, error) {
+func (p *Postgres) GetColumns(table string) ([]Column, error) {
 	// Query the database for the columns
 	dataCols, err := p.QueryData(fmt.Sprintf(`
 		SELECT
@@ -113,7 +121,13 @@ func (p *Postgres) QueryColumns(table string) ([]Column, error) {
 	return columns, nil
 }
 
-func (p *Postgres) QueryProcesses() ([]Process, error) {
+func (p *Postgres) QuoteIdentifier(name string) string {
+	return `"` + name + `"`
+}
+
+// ProcessManager implementation
+
+func (p *Postgres) GetProcesses() ([]Process, error) {
 	// Query the database for the currently running processes
 	query := `
 		SELECT

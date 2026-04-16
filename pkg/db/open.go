@@ -13,7 +13,7 @@ import (
 
 // Open opens a database connection based on the provided DSN.
 // Use GetDsn before calling Open to get a valid normalized DSN.
-func Open(dsn string) (Database, error) {
+func Open(dsn string) (QueryExecutor, error) {
 	// Validate and parse dsn
 	if dsn == "" {
 		return nil, errors.New("empty DSN")

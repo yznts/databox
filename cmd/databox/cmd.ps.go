@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"os"
@@ -41,8 +42,14 @@ func psCmd() {
 		defer con.Close()
 	}
 
+	pm, ok := con.(db.ProcessManager)
+	if !ok {
+		dio.AssertError(stderr, errors.New("database does not support process management"), *psDebug)
+		return
+	}
+
 	// Query processes
-	processes, err := con.QueryProcesses()
+	processes, err := pm.GetProcesses()
 	dio.AssertError(stderr, err, *psDebug, "Failed to query processes: %v")
 
 	// Write processes

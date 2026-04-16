@@ -62,7 +62,8 @@ func dsnCmd() {
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get schema version: %v")
 		schemaVersion := conv.Int(data.Rows[0][0])
 		// Get table count
-		tables, err := con.QueryTables()
+		sm := con.(db.SchemaManager)
+		tables, err := sm.GetTables()
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to query tables: %v")
 		tableCount := 0
 		for _, t := range tables {

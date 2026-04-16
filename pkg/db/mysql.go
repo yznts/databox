@@ -11,9 +11,19 @@ import (
 	"github.com/yznts/zen/v3/slice"
 )
 
+// Mysql is a mysql database wrapper implementation.
+// It implements QueryExecutor, SchemaManager and ProcessManager interfaces.
 type Mysql struct {
 	*Connection
 }
+
+// Internals
+
+func (m *Mysql) systemSchemas() []string {
+	return []string{"mysql", "information_schema", "performance_schema", "sys"}
+}
+
+// QueryExecutor implementation
 
 func (m *Mysql) GetConnection() *Connection {
 	return m.Connection
@@ -104,11 +114,9 @@ func (m *Mysql) QueryDataStream(query string, args ...any) (<-chan *Data, <-chan
 	return dataCh, errCh
 }
 
-func (m *Mysql) systemSchemas() []string {
-	return []string{"mysql", "information_schema", "performance_schema", "sys"}
-}
+// SchemaManager implementation
 
-func (m *Mysql) QueryTables() ([]Table, error) {
+func (m *Mysql) GetTables() ([]Table, error) {
 	// Query the database for the tables
 	data, err := m.QueryData("SELECT table_name,table_schema FROM information_schema.tables")
 	if err != nil {
@@ -132,7 +140,7 @@ func (m *Mysql) QueryTables() ([]Table, error) {
 	return tables, nil
 }
 
-func (m *Mysql) QueryColumns(table string) ([]Column, error) {
+func (m *Mysql) GetColumns(table string) ([]Column, error) {
 	// Query the database for the columns
 	dataCols, err := m.QueryData(fmt.Sprintf(`
 		SELECT
@@ -199,7 +207,49 @@ func (m *Mysql) QueryColumns(table string) ([]Column, error) {
 	return columns, nil
 }
 
-func (m *Mysql) QueryProcesses() ([]Process, error) {
+func (m *Mysql) CreateTable(table string, columns []Column) error {
+	var parts []string
+	var primaryKeys []string
+	var foreignKeys []string
+
+	for _, col := range columns {
+		colDef := m.QuoteIdentifier(col.Name) + " " + col.Type
+		if !col.IsNullable {
+			colDef += " NOT NULL"
+		}
+		if mapped := MapDefault(col.Default, m.Scheme); mapped != nil {
+			colDef += fmt.Sprintf(" DEFAULT %v", mapped)
+		}
+		parts = append(parts, colDef)
+
+		if col.IsPrimary {
+			primaryKeys = append(primaryKeys, m.QuoteIdentifier(col.Name))
+		}
+		if col.ForeignRef != "" {
+			foreignKeys = append(foreignKeys, fmt.Sprintf(
+				"FOREIGN KEY (%s) REFERENCES %s ON UPDATE %s ON DELETE %s",
+				m.QuoteIdentifier(col.Name), col.ForeignRef, col.ForeignOnUpdate, col.ForeignOnDelete,
+			))
+		}
+	}
+
+	if len(primaryKeys) > 0 {
+		parts = append(parts, "PRIMARY KEY ("+strings.Join(primaryKeys, ", ")+")")
+	}
+	parts = append(parts, foreignKeys...)
+
+	sql := fmt.Sprintf("CREATE TABLE %s (\n  %s\n)", m.QuoteIdentifier(table), strings.Join(parts, ",\n  "))
+	_, err := m.Exec(sql)
+	return err
+}
+
+func (m *Mysql) QuoteIdentifier(name string) string {
+	return "`" + name + "`"
+}
+
+// ProcessManager implementation
+
+func (m *Mysql) GetProcesses() ([]Process, error) {
 	// Query the database for the currently running processes
 	query := `
 		SELECT id, time, user, db, info

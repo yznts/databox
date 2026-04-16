@@ -46,6 +46,11 @@ func lsCmd() {
 	if con, isCloser := con.(io.Closer); isCloser {
 		defer con.Close()
 	}
+	sm, ok := con.(db.SchemaManager)
+	if !ok {
+		dio.AssertError(stderr, errors.New("database does not support schema operations"), *lsDebug)
+		return
+	}
 
 	// If -sql is set, output CREATE TABLE DDL via the TableWriter interface.
 	// With a table argument: DDL for that table only.
@@ -59,7 +64,7 @@ func lsCmd() {
 		if lsFlagSet.NArg() >= 1 {
 			tableNames = []string{lsFlagSet.Arg(0)}
 		} else {
-			allTables, err := con.QueryTables()
+			allTables, err := sm.GetTables()
 			dio.AssertError(stderr, err, *lsDebug, "Failed to list tables: %v")
 			if !*lsSys {
 				allTables = slice.Filter(allTables, func(t db.Table) bool { return !t.IsSystem })
@@ -69,7 +74,7 @@ func lsCmd() {
 			}
 		}
 		for _, name := range tableNames {
-			columns, err := con.QueryColumns(name)
+			columns, err := sm.GetColumns(name)
 			dio.AssertError(stderr, err, *lsDebug, "Failed to list columns: %v")
 			tw.WriteTable(name, columns)
 		}
@@ -80,7 +85,7 @@ func lsCmd() {
 	// Otherwise, list columns for provided table name.
 	if lsFlagSet.NArg() == 0 {
 		// Get tables
-		tables, err := con.QueryTables()
+		tables, err := sm.GetTables()
 		dio.AssertError(stderr, err, *lsDebug, "Failed to list tables: %v")
 		// Filter system tables
 		if !*lsSys {
@@ -107,7 +112,7 @@ func lsCmd() {
 		// We are going to list columns for that table.
 
 		// Get table columns
-		columns, err := con.QueryColumns(lsFlagSet.Arg(0))
+		columns, err := sm.GetColumns(lsFlagSet.Arg(0))
 		dio.AssertError(stderr, err, *lsDebug, "Failed to list columns: %v")
 
 		// Extend aliases

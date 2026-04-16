@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"os"
@@ -47,8 +48,14 @@ func killCmd() {
 		defer con.Close()
 	}
 
+	pm, ok := con.(db.ProcessManager)
+	if !ok {
+		dio.AssertError(stderr, errors.New("database does not support process management"), *killDebug)
+		return
+	}
+
 	// Query the database for currently running processes
-	processes, err := con.QueryProcesses()
+	processes, err := pm.GetProcesses()
 	dio.AssertError(stderr, err, *killDebug, "Failed to query processes: %v")
 
 	// Find out processes to kill
@@ -87,7 +94,7 @@ func killCmd() {
 	// Kill the processes
 	statuses := map[int]error{}
 	for _, p := range kill {
-		statuses[p.Pid] = con.KillProcess(p.Pid, *killForce)
+		statuses[p.Pid] = pm.KillProcess(p.Pid, *killForce)
 	}
 
 	// Report the status

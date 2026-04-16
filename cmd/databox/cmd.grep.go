@@ -51,7 +51,12 @@ func grepCmd() {
 	pattern := grepFlagSet.Arg(1)
 
 	// Get table columns
-	cols, err := con.QueryColumns(table)
+	sm, ok := con.(db.SchemaManager)
+	if !ok {
+		dio.AssertError(stderr, errors.New("database does not support schema operations"), *grepDebug)
+		return
+	}
+	cols, err := sm.GetColumns(table)
 	dio.AssertError(stderr, err, *grepDebug, "Failed to get columns for table %s: %v")
 
 	// Build parameterized query to search for pattern in all columns.

@@ -1,33 +1,33 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/yznts/zen/v3/slice"
 )
 
-// TODO: Include raw sql.
-// SELECT sql FROM sqlite_schema WHERE name='...';
-//
-// For postgres
-// SELECT pg_get_tabledef('mytable'::regclass);
-// or
-// SELECT pg_get_tabledef(oid) FROM pg_class WHERE relname = 'mytable';
-
+// Sqlite is an sqlite database wrapper implementation.
+// It implements QueryExecutor and SchemaManager interfaces.
+// ProcessManager is not supported.
 type Sqlite struct {
 	*Connection
 }
 
-func (s *Sqlite) GetConnection() *Connection {
-	return s.Connection
-}
+// Internals
 
 func (s *Sqlite) systemTables() []string {
 	return []string{"sqlite_master", "sqlite_sequence", "sqlite_stat1"}
 }
 
-func (s *Sqlite) QueryTables() ([]Table, error) {
+// QueryExecutor implementation
+
+func (s *Sqlite) GetConnection() *Connection {
+	return s.Connection
+}
+
+// SchemaManager implementation
+
+func (s *Sqlite) GetTables() ([]Table, error) {
 	// Query the database for the tables
 	data, err := s.QueryData("SELECT name,'' FROM sqlite_master WHERE type='table'")
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *Sqlite) QueryTables() ([]Table, error) {
 	return tables, nil
 }
 
-func (s *Sqlite) QueryColumns(table string) ([]Column, error) {
+func (s *Sqlite) GetColumns(table string) ([]Column, error) {
 	// Query the database for the columns.
 	// We can't select exact fields because of 'notnull' issue (syntax error near "notnull").
 	// So, here is a reference column list:
@@ -94,10 +94,6 @@ func (s *Sqlite) QueryColumns(table string) ([]Column, error) {
 	return columns, nil
 }
 
-func (s *Sqlite) QueryProcesses() ([]Process, error) {
-	return nil, errors.New("sqlite doesn't support process list query, use `lsof <file>` instead")
-}
-
-func (s *Sqlite) KillProcess(pid int, force bool) error {
-	return errors.New("sqlite doesn't support process killing, use `lsof <file>` + `kill` instead")
+func (s *Sqlite) QuoteIdentifier(name string) string {
+	return `"` + name + `"`
 }

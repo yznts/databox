@@ -60,13 +60,24 @@ func cpCmd() {
 		defer dstCon.Close()
 	}
 
+	srcSm, ok := srcCon.(db.SchemaManager)
+	if !ok {
+		dio.AssertError(stderr, errors.New("source database does not support schema operations"), *cpDebug)
+		return
+	}
+	dstSm, ok := dstCon.(db.SchemaManager)
+	if !ok {
+		dio.AssertError(stderr, errors.New("destination database does not support schema operations"), *cpDebug)
+		return
+	}
+
 	// Warn about possible lossy type conversions when databases differ
 	if srcCon.GetConnection().Scheme != dstCon.GetConnection().Scheme {
 		dio.AssertWarning(stderr, fmt.Errorf("source and destination databases are different types; column types will be mapped to generic equivalents and may lose precision or specificity"), *cpDebug, *cpNowarn)
 	}
 
 	// Read source tables (excluding system tables)
-	tables, err := srcCon.QueryTables()
+	tables, err := srcSm.GetTables()
 	dio.AssertError(stderr, err, *cpDebug, "Failed to query source tables: %v")
 	tables = slice.Filter(tables, func(t db.Table) bool {
 		return !t.IsSystem
@@ -82,7 +93,7 @@ func cpCmd() {
 
 	// Drop destination tables before migration
 	for _, table := range tables {
-		dstCon.GetConnection().Exec(`DROP TABLE IF EXISTS "` + table.Name + `"`)
+		dstCon.GetConnection().Exec("DROP TABLE IF EXISTS " + dstSm.QuoteIdentifier(table.Name))
 	}
 
 	// Track row counts per table for summary
@@ -91,14 +102,20 @@ func cpCmd() {
 	// Migrate schema and data for each table
 	for _, table := range tables {
 		// Query source columns
-		columns, err := srcCon.QueryColumns(table.Name)
+		columns, err := srcSm.GetColumns(table.Name)
 		dio.AssertError(stderr, err, *cpDebug, "Failed to query columns for "+table.Name+": %v")
 
-		// Build and execute CREATE TABLE on destination
+		// Map column types to destination scheme when databases differ
 		srcScheme := srcCon.GetConnection().Scheme
 		dstScheme := dstCon.GetConnection().Scheme
-		createSQL := cpCreateTable(table.Name, columns, srcScheme, dstScheme)
-		_, err = dstCon.GetConnection().Exec(createSQL)
+		if srcScheme != dstScheme {
+			for i, col := range columns {
+				columns[i].Type = db.MapType(col.Type, dstScheme)
+			}
+		}
+
+		// Build and execute CREATE TABLE on destination
+		err = dstSm.CreateTable(table.Name, columns)
 		dio.AssertError(stderr, err, *cpDebug, "Failed to create table "+table.Name+": %v")
 
 		// Copy data unless schema-only mode
@@ -112,7 +129,7 @@ func cpCmd() {
 				// Build INSERT statement with appropriate placeholders for destination database
 				quotedCols := make([]string, len(data.Cols))
 				for i, c := range data.Cols {
-					quotedCols[i] = cpQuote(c)
+					quotedCols[i] = dstSm.QuoteIdentifier(c)
 				}
 				colList := strings.Join(quotedCols, ", ")
 
@@ -129,13 +146,20 @@ func cpCmd() {
 					var valueSets []string
 					var args []any
 					for rowIdx, row := range batch {
-						placeholder := cpPlaceholders(len(data.Cols), dstCon.GetConnection().Scheme, rowIdx*len(data.Cols))
-						valueSets = append(valueSets, "("+placeholder+")")
+						ph := make([]string, len(data.Cols))
+						for i := range data.Cols {
+							if dstCon.GetConnection().Scheme == db.PostgresDriver {
+								ph[i] = fmt.Sprintf("$%d", rowIdx*len(data.Cols)+i+1)
+							} else {
+								ph[i] = "?"
+							}
+						}
+						valueSets = append(valueSets, "("+strings.Join(ph, ", ")+")")
 						args = append(args, row...)
 					}
 
 					insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES %s",
-						cpQuote(table.Name),
+						dstSm.QuoteIdentifier(table.Name),
 						colList,
 						strings.Join(valueSets, ", "),
 					)
@@ -159,65 +183,4 @@ func cpCmd() {
 			return []any{t.Name, transferType, rows}
 		}),
 	})
-}
-
-// cpCreateTable builds a CREATE TABLE statement from column definitions,
-// translating column types to the destination database.
-func cpCreateTable(name string, columns []db.Column, srcScheme, dstScheme string) string {
-	var parts []string
-	var primaryKeys []string
-	var foreignKeys []string
-
-	for _, col := range columns {
-		colType := col.Type
-		if srcScheme != dstScheme {
-			colType = db.MapType(col.Type, dstScheme)
-		}
-		colDef := cpQuote(col.Name) + " " + colType
-		if !col.IsNullable {
-			colDef += " NOT NULL"
-		}
-		if mapped := db.MapDefault(col.Default, dstScheme); mapped != nil {
-			colDef += fmt.Sprintf(" DEFAULT %v", mapped)
-		}
-		parts = append(parts, colDef)
-
-		if col.IsPrimary {
-			primaryKeys = append(primaryKeys, cpQuote(col.Name))
-		}
-		if col.ForeignRef != "" {
-			foreignKeys = append(foreignKeys, fmt.Sprintf(
-				"FOREIGN KEY (%s) REFERENCES %s ON UPDATE %s ON DELETE %s",
-				cpQuote(col.Name), col.ForeignRef, col.ForeignOnUpdate, col.ForeignOnDelete,
-			))
-		}
-	}
-
-	if len(primaryKeys) > 0 {
-		parts = append(parts, "PRIMARY KEY ("+strings.Join(primaryKeys, ", ")+")")
-	}
-	parts = append(parts, foreignKeys...)
-
-	return fmt.Sprintf("CREATE TABLE %s (\n  %s\n)", cpQuote(name), strings.Join(parts, ",\n  "))
-}
-
-// cpQuote wraps an identifier in double quotes.
-func cpQuote(name string) string {
-	return `"` + name + `"`
-}
-
-// cpPlaceholders builds a comma-separated placeholder string
-// appropriate for the destination database type.
-// offset is the starting parameter index (used for batched inserts).
-func cpPlaceholders(n int, scheme string, offset int) string {
-	placeholders := make([]string, n)
-	for i := range n {
-		switch scheme {
-		case "postgres":
-			placeholders[i] = fmt.Sprintf("$%d", offset+i+1)
-		default:
-			placeholders[i] = "?"
-		}
-	}
-	return strings.Join(placeholders, ", ")
 }
