@@ -14,7 +14,7 @@ import (
 // like a table or styled error/warn messages.
 // Uses lipgloss for styling.
 type Gloss struct {
-	w      io.WriteCloser
+	w      io.Writer
 	closed bool
 }
 
@@ -47,11 +47,11 @@ func (g *Gloss) WriteError(err error) {
 }
 
 // WriteWarning writes a warning message in a styled format.
-func (g *Gloss) WriteWarning(msg string) {
+func (g *Gloss) WriteWarning(err error) {
 	_msg := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#f6ef6f")).
 		Bold(true).
-		Render(fmt.Sprintf("warning: %s", msg))
+		Render(fmt.Sprintf("warning: %s", err.Error()))
 	g.w.Write([]byte(_msg + "\n"))
 	// No need to close writer, because it's just a warning message.
 	// We can write more data after that.
@@ -95,6 +95,6 @@ func (g *Gloss) WriteData(data *db.Data) {
 }
 
 // Create a new gloss writer.
-func NewGloss(w io.WriteCloser) *Gloss {
+func NewGloss(w io.Writer) *Gloss {
 	return &Gloss{w: w}
 }

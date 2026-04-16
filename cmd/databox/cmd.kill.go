@@ -35,8 +35,8 @@ var (
 func killCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, false, false, false, false)
-		stderr = dio.Open(os.Stderr, false, false, false, false)
+		stdout = dio.Open(os.Stdout, dio.Config{})
+		stderr = dio.Open(os.Stderr, dio.Config{})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*killDsn)

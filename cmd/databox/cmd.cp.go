@@ -33,8 +33,8 @@ var (
 func cpCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, false, *cpCsv, *cpJson, *cpJsonl)
-		stderr = dio.Open(os.Stderr, false, *cpCsv, *cpJson, *cpJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Csv: *cpCsv, Json: *cpJson, Jsonl: *cpJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Csv: *cpCsv, Json: *cpJson, Jsonl: *cpJsonl})
 	)
 
 	// Validate arguments
@@ -104,18 +104,36 @@ func cpCmd() {
 
 			if len(data.Rows) > 0 {
 				// Build INSERT statement with appropriate placeholders for destination database
-				placeholders := cpPlaceholders(len(data.Cols), dstCon.GetConnection().Scheme)
 				quotedCols := make([]string, len(data.Cols))
 				for i, c := range data.Cols {
 					quotedCols[i] = cpQuote(c)
 				}
-				insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-					cpQuote(table.Name),
-					strings.Join(quotedCols, ", "),
-					placeholders,
-				)
-				for _, row := range data.Rows {
-					_, err := dstCon.GetConnection().Exec(insertSQL, row...)
+				colList := strings.Join(quotedCols, ", ")
+
+				// Batch insert rows (batch size 100)
+				batchSize := 100
+				for i := 0; i < len(data.Rows); i += batchSize {
+					end := i + batchSize
+					if end > len(data.Rows) {
+						end = len(data.Rows)
+					}
+					batch := data.Rows[i:end]
+
+					// Build multi-row VALUES clause
+					var valueSets []string
+					var args []any
+					for rowIdx, row := range batch {
+						placeholder := cpPlaceholders(len(data.Cols), dstCon.GetConnection().Scheme, rowIdx*len(data.Cols))
+						valueSets = append(valueSets, "("+placeholder+")")
+						args = append(args, row...)
+					}
+
+					insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES %s",
+						cpQuote(table.Name),
+						colList,
+						strings.Join(valueSets, ", "),
+					)
+					_, err := dstCon.GetConnection().Exec(insertSQL, args...)
 					dio.AssertError(stderr, err, *cpDebug, "Failed to insert data into "+table.Name+": %v")
 				}
 			}
@@ -180,12 +198,13 @@ func cpQuote(name string) string {
 
 // cpPlaceholders builds a comma-separated placeholder string
 // appropriate for the destination database type.
-func cpPlaceholders(n int, scheme string) string {
+// offset is the starting parameter index (used for batched inserts).
+func cpPlaceholders(n int, scheme string, offset int) string {
 	placeholders := make([]string, n)
 	for i := range n {
 		switch scheme {
 		case "postgres":
-			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			placeholders[i] = fmt.Sprintf("$%d", offset+i+1)
 		default:
 			placeholders[i] = "?"
 		}

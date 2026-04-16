@@ -29,8 +29,8 @@ var (
 func grepCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, *grepSql, *grepCsv, *grepJson, *grepJsonl)
-		stderr = dio.Open(os.Stderr, *grepSql, *grepCsv, *grepJson, *grepJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Sql: *grepSql, Csv: *grepCsv, Json: *grepJson, Jsonl: *grepJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Sql: *grepSql, Csv: *grepCsv, Json: *grepJson, Jsonl: *grepJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*grepDsn)

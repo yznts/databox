@@ -29,8 +29,8 @@ var (
 func psCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, *psSql, *psCsv, *psJson, *psJsonl)
-		stderr = dio.Open(os.Stderr, *psSql, *psCsv, *psJson, *psJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Sql: *psSql, Csv: *psCsv, Json: *psJson, Jsonl: *psJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Sql: *psSql, Csv: *psCsv, Json: *psJson, Jsonl: *psJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*psDsn)

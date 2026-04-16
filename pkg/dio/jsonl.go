@@ -26,9 +26,9 @@ func (j *Jsonl) write(data []byte) {
 	}
 }
 
-// Multi returns true if the writer supports multiple writes.
+// MultiWrite returns true if the writer supports multiple writes.
 // Jsonl supports multiple writes.
-func (j *Jsonl) Multi() bool {
+func (j *Jsonl) MultiWrite() bool {
 	return true
 }
 

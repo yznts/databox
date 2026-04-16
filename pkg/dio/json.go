@@ -9,7 +9,7 @@ import (
 
 // Json is a writer that writes a single json object.
 type Json struct {
-	w io.WriteCloser
+	w io.Writer
 
 	closed bool
 }
@@ -21,10 +21,6 @@ type Json struct {
 func (j *Json) write(data []byte) {
 	data = append(data, '\n')
 	if _, err := j.w.Write(data); err != nil {
-		panic(err)
-	}
-
-	if err := j.w.Close(); err != nil {
 		panic(err)
 	}
 }
@@ -56,6 +52,6 @@ func (j *Json) WriteData(data *db.Data) {
 	j.closed = true
 }
 
-func NewJson(w io.WriteCloser) *Json {
+func NewJson(w io.Writer) *Json {
 	return &Json{w: w}
 }

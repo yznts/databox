@@ -9,6 +9,7 @@ import (
 
 	"github.com/yznts/databox/pkg/db"
 	"github.com/yznts/databox/pkg/dio"
+	"github.com/yznts/zen/v3/conv"
 )
 
 var (
@@ -23,7 +24,8 @@ var (
 	tailJson  = flagJson(tailFlagSet)
 	tailJsonl = flagJsonl(tailFlagSet)
 	// Additional tool flags
-	tailN = tailFlagSet.Int("n", 10, "Number of rows to output")
+	tailN     = tailFlagSet.Int("n", 10, "Number of rows to output")
+	tailOrder = flagOrder(tailFlagSet)
 
 	tailUsage = "[options] <table>"
 	tailDescr = "Outputs the last N rows of a table. By default, outputs 10 rows."
@@ -32,8 +34,8 @@ var (
 func tailCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, *tailSql, *tailCsv, *tailJson, *tailJsonl)
-		stderr = dio.Open(os.Stderr, *tailSql, *tailCsv, *tailJson, *tailJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Sql: *tailSql, Csv: *tailCsv, Json: *tailJson, Jsonl: *tailJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Sql: *tailSql, Csv: *tailCsv, Json: *tailJson, Jsonl: *tailJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*tailDsn)
@@ -50,11 +52,21 @@ func tailCmd() {
 	}
 	table := tailFlagSet.Arg(0)
 
-	// Execute query with subquery to reverse row order, outputting last N rows
-	query := fmt.Sprintf(
-		`SELECT * FROM (SELECT * FROM "%s" LIMIT %d OFFSET (SELECT MAX(0, COUNT(*) - %d) FROM "%s")) sub`,
-		table, *tailN, *tailN, table,
-	)
+	// Get total row count first, then compute offset for last N rows.
+	// This approach is cross-database compatible (MySQL doesn't support subqueries in LIMIT/OFFSET).
+	countData, err := con.QueryData(fmt.Sprintf(`SELECT COUNT(*) FROM "%s"`, table))
+	dio.AssertError(stderr, err, *tailDebug, "Failed to count rows: %v")
+	totalRows := 0
+	if len(countData.Rows) > 0 {
+		totalRows = conv.Int(countData.Rows[0][0])
+	}
+	offset := totalRows - *tailN
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Execute query with computed offset
+	query := fmt.Sprintf(`SELECT * FROM "%s"%s LIMIT %d OFFSET %d`, table, orderClause(*tailOrder), *tailN, offset)
 	data, err := con.QueryData(query)
 	dio.AssertError(stderr, err, *tailDebug, "Failed to execute query: %v")
 	if tw, ok := stdout.(dio.TableWriter); ok {

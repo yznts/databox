@@ -23,6 +23,9 @@ var (
 	catJson  = flagJson(catFlagSet)
 	catJsonl = flagJsonl(catFlagSet)
 
+	// Additional tool flags
+	catOrder = flagOrder(catFlagSet)
+
 	catUsage = "[options] <table>"
 	catDescr = "Outputs all rows of a table."
 )
@@ -30,8 +33,8 @@ var (
 func catCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, *catSql, *catCsv, *catJson, *catJsonl)
-		stderr = dio.Open(os.Stderr, *catSql, *catCsv, *catJson, *catJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Sql: *catSql, Csv: *catCsv, Json: *catJson, Jsonl: *catJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Sql: *catSql, Csv: *catCsv, Json: *catJson, Jsonl: *catJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*catDsn)
@@ -49,7 +52,7 @@ func catCmd() {
 	table := catFlagSet.Arg(0)
 
 	// Execute query and output results
-	query := fmt.Sprintf(`SELECT * FROM "%s"`, table)
+	query := fmt.Sprintf(`SELECT * FROM "%s"%s`, table, orderClause(*catOrder))
 	data, err := con.QueryData(query)
 	dio.AssertError(stderr, err, *catDebug, "Failed to execute query: %v")
 	if tw, ok := stdout.(dio.TableWriter); ok {

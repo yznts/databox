@@ -29,8 +29,8 @@ var (
 func sqlCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, *sqlOutSql, *sqlCsv, *sqlJson, *sqlJsonl)
-		stderr = dio.Open(os.Stderr, *sqlOutSql, *sqlCsv, *sqlJson, *sqlJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Sql: *sqlOutSql, Csv: *sqlCsv, Json: *sqlJson, Jsonl: *sqlJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Sql: *sqlOutSql, Csv: *sqlCsv, Json: *sqlJson, Jsonl: *sqlJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*sqlDsn)

@@ -23,7 +23,8 @@ var (
 	headJson  = flagJson(headFlagSet)
 	headJsonl = flagJsonl(headFlagSet)
 	// Additional tool flags
-	headN = headFlagSet.Int("n", 10, "Number of rows to output")
+	headN     = headFlagSet.Int("n", 10, "Number of rows to output")
+	headOrder = flagOrder(headFlagSet)
 
 	headUsage = "[options] <table>"
 	headDescr = "Outputs the first N rows of a table. By default, outputs 10 rows."
@@ -32,8 +33,8 @@ var (
 func headCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, *headSql, *headCsv, *headJson, *headJsonl)
-		stderr = dio.Open(os.Stderr, *headSql, *headCsv, *headJson, *headJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Sql: *headSql, Csv: *headCsv, Json: *headJson, Jsonl: *headJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Sql: *headSql, Csv: *headCsv, Json: *headJson, Jsonl: *headJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*headDsn)
@@ -51,7 +52,7 @@ func headCmd() {
 	table := headFlagSet.Arg(0)
 
 	// Execute query and output results
-	query := fmt.Sprintf(`SELECT * FROM "%s" LIMIT %d`, table, *headN)
+	query := fmt.Sprintf(`SELECT * FROM "%s"%s LIMIT %d`, table, orderClause(*headOrder), *headN)
 	data, err := con.QueryData(query)
 	dio.AssertError(stderr, err, *headDebug, "Failed to execute query: %v")
 	if tw, ok := stdout.(dio.TableWriter); ok {

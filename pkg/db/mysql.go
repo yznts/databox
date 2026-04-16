@@ -207,6 +207,10 @@ func (m *Mysql) QueryProcesses() ([]Process, error) {
 }
 
 func (m *Mysql) KillProcess(pid int, force bool) error {
-	_, err := m.Exec(fmt.Sprintf("KILL %d", pid))
+	if force {
+		_, err := m.Exec(fmt.Sprintf("KILL CONNECTION %d", pid))
+		return err
+	}
+	_, err := m.Exec(fmt.Sprintf("KILL QUERY %d", pid))
 	return err
 }

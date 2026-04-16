@@ -34,8 +34,8 @@ var (
 func lsCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, false, *lsCsv, *lsJson, *lsJsonl)
-		stderr = dio.Open(os.Stderr, false, *lsCsv, *lsJson, *lsJsonl)
+		stdout = dio.Open(os.Stdout, dio.Config{Csv: *lsCsv, Json: *lsJson, Jsonl: *lsJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Csv: *lsCsv, Json: *lsJson, Jsonl: *lsJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*lsDsn)

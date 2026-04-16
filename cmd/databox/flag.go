@@ -54,3 +54,20 @@ func flagJson(fset *flag.FlagSet) *bool {
 func flagJsonl(fset *flag.FlagSet) *bool {
 	return fset.Bool("jsonl", false, "Output in JSON Lines format")
 }
+
+// flagOrder adds an -order flag to a flag set.
+func flagOrder(fset *flag.FlagSet) *string {
+	return fset.String("order", "", "Column name to order by (prefix with - for descending, e.g. -id)")
+}
+
+// orderClause builds an ORDER BY clause from the order flag value.
+// Returns an empty string if the flag is empty.
+func orderClause(order string) string {
+	if order == "" {
+		return ""
+	}
+	if order[0] == '-' {
+		return fmt.Sprintf(` ORDER BY "%s" DESC`, order[1:])
+	}
+	return fmt.Sprintf(` ORDER BY "%s" ASC`, order)
+}
