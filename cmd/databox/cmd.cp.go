@@ -60,6 +60,11 @@ func cpCmd() {
 		defer dstCon.Close()
 	}
 
+	// Warn about possible lossy type conversions when databases differ
+	if srcCon.GetConnection().Scheme != dstCon.GetConnection().Scheme {
+		dio.AssertWarning(stderr, fmt.Errorf("source and destination databases are different types; column types will be mapped to generic equivalents and may lose precision or specificity"), *cpDebug, *cpNowarn)
+	}
+
 	// Read source tables (excluding system tables)
 	tables, err := srcCon.QueryTables()
 	dio.AssertError(stderr, err, *cpDebug, "Failed to query source tables: %v")
@@ -90,8 +95,9 @@ func cpCmd() {
 		dio.AssertError(stderr, err, *cpDebug, "Failed to query columns for "+table.Name+": %v")
 
 		// Build and execute CREATE TABLE on destination
+		srcScheme := srcCon.GetConnection().Scheme
 		dstScheme := dstCon.GetConnection().Scheme
-		createSQL := cpCreateTable(table.Name, columns, dstScheme)
+		createSQL := cpCreateTable(table.Name, columns, srcScheme, dstScheme)
 		_, err = dstCon.GetConnection().Exec(createSQL)
 		dio.AssertError(stderr, err, *cpDebug, "Failed to create table "+table.Name+": %v")
 
@@ -157,13 +163,17 @@ func cpCmd() {
 
 // cpCreateTable builds a CREATE TABLE statement from column definitions,
 // translating column types to the destination database.
-func cpCreateTable(name string, columns []db.Column, dstScheme string) string {
+func cpCreateTable(name string, columns []db.Column, srcScheme, dstScheme string) string {
 	var parts []string
 	var primaryKeys []string
 	var foreignKeys []string
 
 	for _, col := range columns {
-		colDef := cpQuote(col.Name) + " " + db.MapType(col.Type, dstScheme)
+		colType := col.Type
+		if srcScheme != dstScheme {
+			colType = db.MapType(col.Type, dstScheme)
+		}
+		colDef := cpQuote(col.Name) + " " + colType
 		if !col.IsNullable {
 			colDef += " NOT NULL"
 		}
