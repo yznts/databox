@@ -14,7 +14,8 @@ type Database interface {
 	GetConnection() *Connection
 
 	// Data queries
-	QueryData(query string) (*Data, error) // Return a pointer because data amount might be large
+	QueryData(query string, args ...any) (*Data, error) // Return a pointer because data amount might be large
+	QueryDataStream(query string, args ...any) (<-chan *Data, <-chan error)
 
 	// Schema queries
 	QueryTables() ([]Table, error)

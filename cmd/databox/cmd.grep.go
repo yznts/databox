@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/yznts/databox/pkg/db"
 	"github.com/yznts/databox/pkg/dio"
@@ -52,20 +54,32 @@ func grepCmd() {
 	cols, err := con.QueryColumns(table)
 	dio.AssertError(stderr, err, *grepDebug, "Failed to get columns for table %s: %v")
 
-	// Build query to search for pattern in all columns
-	query := "SELECT * FROM " + table + " WHERE "
-	for i, col := range cols {
-		if i > 0 {
-			query += " OR "
-		}
-		query += col.Name + " LIKE '%" + pattern + "%'"
-	}
+	// Build parameterized query to search for pattern in all columns.
+	// Using $N placeholders for PostgreSQL, ? for MySQL/SQLite.
+	query, args := buildGrepQuery(table, cols, con.GetConnection().Scheme, pattern)
 
 	// Execute query and output results
-	data, err := con.QueryData(query)
-	dio.AssertError(stderr, err, *grepDebug, "Failed to execute query: %v")
-	if tw, ok := stdout.(dio.TableWriter); ok {
-		tw.SetTable(table)
+	dio.Stream(dio.StreamParameters{
+		Con: con, Stdout: stdout, Stderr: stderr,
+		Debug: *grepDebug, Nowarn: *grepNowarn,
+		Table: table, RowCap: 1000, Query: query, Args: args,
+	})
+}
+
+// buildGrepQuery builds a parameterized LIKE query across all columns of a table.
+// It uses $N placeholders for PostgreSQL and ? for MySQL/SQLite.
+func buildGrepQuery(table string, cols []db.Column, scheme, pattern string) (string, []any) {
+	like := "%" + pattern + "%"
+	parts := make([]string, len(cols))
+	args := make([]any, len(cols))
+	for i, col := range cols {
+		ph := "?"
+		if scheme == "postgres" {
+			ph = fmt.Sprintf("$%d", i+1)
+		}
+		parts[i] = `"` + col.Name + `" LIKE ` + ph
+		args[i] = like
 	}
-	stdout.WriteData(data)
+	query := fmt.Sprintf(`SELECT * FROM "%s" WHERE %s`, table, strings.Join(parts, " OR "))
+	return query, args
 }

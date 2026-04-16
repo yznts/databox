@@ -26,6 +26,8 @@ var (
 	// Additional tool flags
 	tailN     = tailFlagSet.Int("n", 10, "Number of rows to output")
 	tailOrder = flagOrder(tailFlagSet)
+	tailCol   = flagCol(tailFlagSet)
+	tailWhere = flagWhere(tailFlagSet)
 
 	tailUsage = "[options] <table>"
 	tailDescr = "Outputs the last N rows of a table. By default, outputs 10 rows."
@@ -52,25 +54,36 @@ func tailCmd() {
 	}
 	table := tailFlagSet.Arg(0)
 
-	// Get total row count first, then compute offset for last N rows.
-	// This approach is cross-database compatible (MySQL doesn't support subqueries in LIMIT/OFFSET).
-	countData, err := con.QueryData(fmt.Sprintf(`SELECT COUNT(*) FROM "%s"`, table))
-	dio.AssertError(stderr, err, *tailDebug, "Failed to count rows: %v")
-	totalRows := 0
-	if len(countData.Rows) > 0 {
-		totalRows = conv.Int(countData.Rows[0][0])
-	}
-	offset := totalRows - *tailN
-	if offset < 0 {
-		offset = 0
+	var query string
+	if *tailOrder != "" {
+		// When an order column is given, use a single subquery:
+		// reverse-sort inner query to get the last N rows, then re-sort outer query
+		// to restore the original direction. No COUNT(*) round-trip needed.
+		inner := fmt.Sprintf(`SELECT * FROM "%s"%s%s LIMIT %d`,
+			table, whereClause(*tailWhere), orderClause(flipOrder(*tailOrder)), *tailN)
+		query = fmt.Sprintf(`SELECT %s FROM (%s) AS _tail%s`,
+			colClause(*tailCol), inner, orderClause(*tailOrder))
+	} else {
+		// Without an order column, fall back to COUNT(*)+OFFSET so that the
+		// positional meaning of "last N rows" is preserved across all databases.
+		countData, err := con.QueryData(
+			fmt.Sprintf(`SELECT COUNT(*) FROM "%s"%s`, table, whereClause(*tailWhere)))
+		dio.AssertError(stderr, err, *tailDebug, "Failed to count rows: %v")
+		totalRows := 0
+		if len(countData.Rows) > 0 {
+			totalRows = conv.Int(countData.Rows[0][0])
+		}
+		offset := totalRows - *tailN
+		if offset < 0 {
+			offset = 0
+		}
+		query = fmt.Sprintf(`SELECT %s FROM "%s"%s LIMIT %d OFFSET %d`,
+			colClause(*tailCol), table, whereClause(*tailWhere), *tailN, offset)
 	}
 
-	// Execute query with computed offset
-	query := fmt.Sprintf(`SELECT * FROM "%s"%s LIMIT %d OFFSET %d`, table, orderClause(*tailOrder), *tailN, offset)
-	data, err := con.QueryData(query)
-	dio.AssertError(stderr, err, *tailDebug, "Failed to execute query: %v")
-	if tw, ok := stdout.(dio.TableWriter); ok {
-		tw.SetTable(table)
-	}
-	stdout.WriteData(data)
+	dio.Stream(dio.StreamParameters{
+		Con: con, Stdout: stdout, Stderr: stderr,
+		Debug: *tailDebug,
+		Table: table, Query: query,
+	})
 }

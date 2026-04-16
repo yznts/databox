@@ -67,6 +67,53 @@ func (s *Sql) WriteData(data *db.Data) {
 	}
 }
 
+// WriteTable writes a CREATE TABLE statement derived from the given column metadata.
+// The output format is SQL DDL, but the method name intentionally stays generic
+// to leave room for other schema representations in other writer types.
+// Primary keys and foreign keys are emitted as table-level constraints.
+func (s *Sql) WriteTable(table string, columns []db.Column) {
+	var colDefs []string
+	var pks []string
+	var fks []string
+
+	for _, col := range columns {
+		def := `    "` + col.Name + `" ` + col.Type
+		if !col.IsNullable {
+			def += " NOT NULL"
+		} else {
+			def += " NULL"
+		}
+		if col.Default != nil {
+			def += " DEFAULT " + sqlValue(col.Default)
+		}
+		colDefs = append(colDefs, def)
+
+		if col.IsPrimary {
+			pks = append(pks, `"`+col.Name+`"`)
+		}
+		if col.ForeignRef != "" {
+			fk := fmt.Sprintf(`    FOREIGN KEY ("%s") REFERENCES %s`, col.Name, col.ForeignRef)
+			if col.ForeignOnUpdate != "" {
+				fk += " ON UPDATE " + col.ForeignOnUpdate
+			}
+			if col.ForeignOnDelete != "" {
+				fk += " ON DELETE " + col.ForeignOnDelete
+			}
+			fks = append(fks, fk)
+		}
+	}
+
+	if len(pks) > 0 {
+		colDefs = append(colDefs, "    PRIMARY KEY ("+strings.Join(pks, ", ")+")")
+	}
+	colDefs = append(colDefs, fks...)
+
+	s.write([]byte(fmt.Sprintf(
+		"CREATE TABLE \"%s\" (\n%s\n);\n",
+		table, strings.Join(colDefs, ",\n"),
+	)))
+}
+
 // sqlValue formats a value for use in a SQL INSERT statement.
 func sqlValue(v any) string {
 	if v == nil {

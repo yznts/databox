@@ -25,6 +25,8 @@ var (
 
 	// Additional tool flags
 	catOrder = flagOrder(catFlagSet)
+	catCol   = flagCol(catFlagSet)
+	catWhere = flagWhere(catFlagSet)
 
 	catUsage = "[options] <table>"
 	catDescr = "Outputs all rows of a table."
@@ -52,11 +54,11 @@ func catCmd() {
 	table := catFlagSet.Arg(0)
 
 	// Execute query and output results
-	query := fmt.Sprintf(`SELECT * FROM "%s"%s`, table, orderClause(*catOrder))
-	data, err := con.QueryData(query)
-	dio.AssertError(stderr, err, *catDebug, "Failed to execute query: %v")
-	if tw, ok := stdout.(dio.TableWriter); ok {
-		tw.SetTable(table)
-	}
-	stdout.WriteData(data)
+	query := fmt.Sprintf(`SELECT %s FROM "%s"%s%s`,
+		colClause(*catCol), table, whereClause(*catWhere), orderClause(*catOrder))
+	dio.Stream(dio.StreamParameters{
+		Con: con, Stdout: stdout, Stderr: stderr,
+		Debug: *catDebug, Nowarn: *catNowarn,
+		Table: table, RowCap: 1000, Query: query,
+	})
 }

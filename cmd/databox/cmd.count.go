@@ -52,7 +52,7 @@ func countCmd() {
 	query := fmt.Sprintf(`SELECT COUNT(*) AS "COUNT" FROM "%s"`, table)
 	data, err := con.QueryData(query)
 	dio.AssertError(stderr, err, *countDebug, "Failed to execute query: %v")
-	if tw, ok := stdout.(dio.TableWriter); ok {
+	if tw, ok := stdout.(dio.TableSetter); ok {
 		tw.SetTable(table)
 	}
 	stdout.WriteData(data)

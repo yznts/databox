@@ -23,7 +23,13 @@ type DataWriter interface {
 	WriteData(data *db.Data)
 }
 
-// TableWriter determines if a writer supports setting a table name context.
-type TableWriter interface {
+// TableSetter determines if a writer supports setting a table name context.
+type TableSetter interface {
 	SetTable(name string)
+}
+
+// TableWriter determines if a writer can output a full table representation
+// (e.g. CREATE TABLE DDL, or any other format that captures the table schema).
+type TableWriter interface {
+	WriteTable(table string, columns []db.Column)
 }

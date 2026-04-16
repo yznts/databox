@@ -25,6 +25,8 @@ var (
 	// Additional tool flags
 	headN     = headFlagSet.Int("n", 10, "Number of rows to output")
 	headOrder = flagOrder(headFlagSet)
+	headCol   = flagCol(headFlagSet)
+	headWhere = flagWhere(headFlagSet)
 
 	headUsage = "[options] <table>"
 	headDescr = "Outputs the first N rows of a table. By default, outputs 10 rows."
@@ -52,11 +54,11 @@ func headCmd() {
 	table := headFlagSet.Arg(0)
 
 	// Execute query and output results
-	query := fmt.Sprintf(`SELECT * FROM "%s"%s LIMIT %d`, table, orderClause(*headOrder), *headN)
-	data, err := con.QueryData(query)
-	dio.AssertError(stderr, err, *headDebug, "Failed to execute query: %v")
-	if tw, ok := stdout.(dio.TableWriter); ok {
-		tw.SetTable(table)
-	}
-	stdout.WriteData(data)
+	query := fmt.Sprintf(`SELECT %s FROM "%s"%s%s LIMIT %d`,
+		colClause(*headCol), table, whereClause(*headWhere), orderClause(*headOrder), *headN)
+	dio.Stream(dio.StreamParameters{
+		Con: con, Stdout: stdout, Stderr: stderr,
+		Debug: *headDebug,
+		Table: table, Query: query,
+	})
 }

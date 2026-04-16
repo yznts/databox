@@ -15,62 +15,84 @@ type Connection struct {
 	Scheme string
 }
 
-// QueryData is a database-agnostic method that queries the database
-// with the given query and returns the result as a Data struct pointer.
+// QueryData queries the database with the given query and optional args,
+// returning the full result set as a Data pointer.
+// Supports parameterized queries: use ? for SQLite/MySQL, $N for PostgreSQL.
 //
-// The Data struct contains the columns and rows of the result.
-// Method is returning a pointer to avoid copying the Data struct,
-// which might be large.
-//
-// This exact implementation is the most generic one.
-// It utilizes 'any' type to store the values of the result
-// and leaves all type assertion to the underlying driver.
-// For some databases, like MySQL, we might need to override this method.
-func (c *Connection) QueryData(query string) (*Data, error) {
-	// Execute the query.
-	rows, err := c.Query(query)
+// This is the generic implementation that uses 'any' for type storage and
+// leaves type assertion to the underlying driver. MySQL overrides this method
+// to use ColumnTypes() for correct type scanning.
+func (c *Connection) QueryData(query string, args ...any) (*Data, error) {
+	rows, err := c.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	// Get columns information.
 	cols, err := rows.Columns()
 	if err != nil {
 		return nil, err
 	}
-	// Initialize the Data struct.
-	// It holds both the columns and rows of the result.
-	data := &Data{
-		Cols: cols,
-	}
-	// Define scan target row.
-	// This is a slice of pointers,
-	// so we need to copy values on each iteration.
+	data := &Data{Cols: cols}
 	var scan []any
 	for range cols {
-		// We're using new(any) here as the most generic solution,
-		// so we're leaving the type assertion to the driver.
-		// In some cases (like MySQL) we will need to override QueryData method
-		// to handle type assertion correctly.
-		//
-		// We're not using col.ScanType() here because it's not always correct.
-		// For example, postgres driver doesn't report nullable types correctly (sql.NullString).
+		// new(any) is the most generic scan target; type assertion is left to the driver.
+		// (postgres driver, unlike MySQL, handles this correctly without ColumnTypes.)
 		scan = append(scan, new(any))
 	}
 	for rows.Next() {
-		// Scan the row into prepared pointers
 		err = rows.Scan(scan...)
 		if err != nil {
 			return nil, err
 		}
-		// Copy exact values from the pointers to the Data struct
 		var row []any
 		for _, ptr := range scan {
-			// Get value from the pointer and append it to the row
 			row = append(row, reflect.ValueOf(ptr).Elem().Interface())
 		}
-		// Append the row to the Data holder
 		data.Rows = append(data.Rows, row)
 	}
-	return data, nil
+	return data, rows.Err()
+}
+
+// QueryDataStream executes a query and streams results row-by-row via channels.
+// The caller should range over the first channel, then read the error channel once.
+// The error channel is buffered (size 1) and is always closed after the data channel.
+// This avoids loading the full result set into memory for large tables.
+func (c *Connection) QueryDataStream(query string, args ...any) (<-chan *Data, <-chan error) {
+	dataCh := make(chan *Data)
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(dataCh)
+		defer close(errCh)
+		rows, err := c.Query(query, args...)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer rows.Close()
+		cols, err := rows.Columns()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		var scan []any
+		for range cols {
+			scan = append(scan, new(any))
+		}
+		for rows.Next() {
+			err = rows.Scan(scan...)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			var row []any
+			for _, ptr := range scan {
+				row = append(row, reflect.ValueOf(ptr).Elem().Interface())
+			}
+			dataCh <- &Data{Cols: cols, Rows: [][]any{row}}
+		}
+		if err := rows.Err(); err != nil {
+			errCh <- err
+		}
+	}()
+	return dataCh, errCh
 }

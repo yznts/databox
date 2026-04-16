@@ -20,6 +20,7 @@ var (
 	lsNowarn = flagNowarn(lsFlagSet)
 	// Data format flags
 	lsDsn   = flagDsn(lsFlagSet)
+	lsSql   = flagSql(lsFlagSet)
 	lsCsv   = flagCsv(lsFlagSet)
 	lsJson  = flagJson(lsFlagSet)
 	lsJsonl = flagJsonl(lsFlagSet)
@@ -34,8 +35,8 @@ var (
 func lsCmd() {
 	// Open stdout/stderr for output
 	var (
-		stdout = dio.Open(os.Stdout, dio.Config{Csv: *lsCsv, Json: *lsJson, Jsonl: *lsJsonl})
-		stderr = dio.Open(os.Stderr, dio.Config{Csv: *lsCsv, Json: *lsJson, Jsonl: *lsJsonl})
+		stdout = dio.Open(os.Stdout, dio.Config{Sql: *lsSql, Csv: *lsCsv, Json: *lsJson, Jsonl: *lsJsonl})
+		stderr = dio.Open(os.Stderr, dio.Config{Sql: *lsSql, Csv: *lsCsv, Json: *lsJson, Jsonl: *lsJsonl})
 	)
 	// Open database connection
 	dsn, err := db.GetDsn(*lsDsn)
@@ -44,6 +45,35 @@ func lsCmd() {
 	dio.AssertError(stderr, err, *lsDebug, "Failed to connect to database: %v")
 	if con, isCloser := con.(io.Closer); isCloser {
 		defer con.Close()
+	}
+
+	// If -sql is set, output CREATE TABLE DDL via the TableWriter interface.
+	// With a table argument: DDL for that table only.
+	// Without a table argument: DDL for all (non-system) tables.
+	if *lsSql {
+		tw, ok := stdout.(dio.TableWriter)
+		if !ok {
+			dio.AssertError(stderr, errors.New("-sql output not supported by current writer"), *lsDebug)
+		}
+		tableNames := []string{}
+		if lsFlagSet.NArg() >= 1 {
+			tableNames = []string{lsFlagSet.Arg(0)}
+		} else {
+			allTables, err := con.QueryTables()
+			dio.AssertError(stderr, err, *lsDebug, "Failed to list tables: %v")
+			if !*lsSys {
+				allTables = slice.Filter(allTables, func(t db.Table) bool { return !t.IsSystem })
+			}
+			for _, t := range allTables {
+				tableNames = append(tableNames, t.Name)
+			}
+		}
+		for _, name := range tableNames {
+			columns, err := con.QueryColumns(name)
+			dio.AssertError(stderr, err, *lsDebug, "Failed to list columns: %v")
+			tw.WriteTable(name, columns)
+		}
+		return
 	}
 
 	// If no arguments, list tables.
