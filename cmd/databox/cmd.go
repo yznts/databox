@@ -18,7 +18,8 @@ var SubCommands = map[string]SubCommand{
 	"head":  {headFlagSet, headUsage, headDescr, headCmd},
 	"tail":  {tailFlagSet, tailUsage, tailDescr, tailCmd},
 	"count": {countFlagSet, countUsage, countDescr, countCmd},
-	"cp":    {cpFlagSet, cpUsage, cpDescr, cpCmd},
+	"cp":      {cpFlagSet, cpUsage, cpDescr, cpCmd},
+	"migrate": {migrateFlagSet, migrateUsage, migrateDescr, migrateCmd},
 	"ps":    {psFlagSet, psUsage, psDescr, psCmd},
 	"kill":  {killFlagSet, killUsage, killDescr, killCmd},
 }
