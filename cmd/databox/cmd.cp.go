@@ -73,7 +73,8 @@ func cpLocalCmd(stdout, stderr dio.DataWriter) {
 	dio.AssertError(stderr, err, *cpDebug, "Failed to query columns for "+srcTable+": %v")
 
 	// Drop destination table before copy
-	con.GetConnection().Exec("DROP TABLE IF EXISTS " + sm.QuoteIdentifier(dstTable))
+	_, err = con.GetConnection().Exec("DROP TABLE IF EXISTS " + sm.QuoteIdentifier(dstTable))
+	dio.AssertError(stderr, err, *cpDebug, "Failed to drop destination table "+dstTable+": %v")
 
 	// Build and execute CREATE TABLE on destination
 	err = sm.CreateTable(dstTable, columns)

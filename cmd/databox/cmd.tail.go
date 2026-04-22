@@ -84,7 +84,7 @@ func tailCmd() {
 
 	dio.Stream(dio.StreamParameters{
 		Con: con, Stdout: stdout, Stderr: stderr,
-		Debug: *tailDebug,
+		Debug: *tailDebug, Nowarn: *tailNowarn,
 		Table: table, Query: query,
 	})
 }

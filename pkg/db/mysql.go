@@ -142,19 +142,19 @@ func (m *Mysql) GetTables() ([]Table, error) {
 
 func (m *Mysql) GetColumns(table string) ([]Column, error) {
 	// Query the database for the columns
-	dataCols, err := m.QueryData(fmt.Sprintf(`
+	dataCols, err := m.QueryData(`
 		SELECT
 			column_name,
 			data_type,
 			(CASE WHEN is_nullable = 'YES' THEN true ELSE false END) AS is_nullable,
 			column_default
 		FROM information_schema.columns
-		WHERE table_name = '%s'`, table))
+		WHERE table_name = ?`, table)
 	if err != nil {
 		return nil, err
 	}
 	// Query the database for constraints
-	dataCons, err := m.QueryData(fmt.Sprintf(`
+	dataCons, err := m.QueryData(`
 		SELECT DISTINCT
 		    tc.CONSTRAINT_NAME,
 		    tc.CONSTRAINT_TYPE,
@@ -173,8 +173,8 @@ func (m *Mysql) GetColumns(table string) ([]Column, error) {
 		      ON rc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
 		      AND rc.CONSTRAINT_SCHEMA = tc.TABLE_SCHEMA
 		WHERE
-		    tc.TABLE_NAME = '%s';
-		`, table))
+		    tc.TABLE_NAME = ?;
+		`, table)
 	if err != nil {
 		return nil, err
 	}

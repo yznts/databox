@@ -59,7 +59,7 @@ func headCmd() {
 		colClause(*headCol), table, whereClause(*headWhere), orderClause(*headOrder), *headN)
 	dio.Stream(dio.StreamParameters{
 		Con: con, Stdout: stdout, Stderr: stderr,
-		Debug: *headDebug,
+		Debug: *headDebug, Nowarn: *headNowarn,
 		Table: table, Query: query,
 	})
 }

@@ -104,7 +104,8 @@ func migrateRunCmd(stdout, stderr dio.DataWriter) {
 
 	// Drop destination tables before migration
 	for _, table := range tables {
-		dstCon.GetConnection().Exec("DROP TABLE IF EXISTS " + dstSm.QuoteIdentifier(table.Name))
+		_, err := dstCon.GetConnection().Exec("DROP TABLE IF EXISTS " + dstSm.QuoteIdentifier(table.Name))
+		dio.AssertError(stderr, err, *migrateDebug, "Failed to drop destination table "+table.Name+": %v")
 	}
 
 	// Track row counts per table for summary
