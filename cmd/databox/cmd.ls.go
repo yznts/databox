@@ -27,9 +27,9 @@ var (
 	lsJsonl = flagJsonl(lsFlagSet)
 	// Additional tool flags
 	lsSys = lsFlagSet.Bool("sys", false, "Include system tables")
-	lsCol = lsFlagSet.String("col", "extended", "Comma-separated list of column attributes to display (available: COLUMN_NAME/COLUMN_TYPE/IS_PK/IS_NL/DEFAULT/FK/FK_DEL/FK_UPD, aliases for sets: basic/extended/all)")
+	lsCol = lsFlagSet.String("col", "extended", "When a table name is given: which column metadata fields to print (not row data). Comma-separated: COLUMN_NAME, COLUMN_TYPE, IS_PK, IS_NL, DEFAULT, FK, FK_DEL, FK_UPD. Presets: basic, extended, all")
 
-	lsUsage = "[options] <sql-query>"
+	lsUsage = "[options] [table]"
 	lsDescr = "Lists tables/columns in the database."
 )
 

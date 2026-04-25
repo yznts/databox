@@ -22,9 +22,11 @@ var (
 	countCsv   = flagCsv(countFlagSet)
 	countJson  = flagJson(countFlagSet)
 	countJsonl = flagJsonl(countFlagSet)
+	// Additional tool flags
+	countWhere = flagWhere(countFlagSet)
 
 	countUsage = "[options] <table>"
-	countDescr = "Outputs the row count of a table."
+	countDescr = "Outputs the row count of a table. Optional -where limits which rows are counted."
 )
 
 func countCmd() {
@@ -49,7 +51,7 @@ func countCmd() {
 	table := countFlagSet.Arg(0)
 
 	// Execute count query
-	query := fmt.Sprintf(`SELECT COUNT(*) AS "COUNT" FROM "%s"`, table)
+	query := fmt.Sprintf(`SELECT COUNT(*) AS "COUNT" FROM "%s"%s`, table, whereClause(*countWhere))
 	data, err := con.QueryData(query)
 	dio.AssertError(stderr, err, *countDebug, "Failed to execute query: %v")
 	stdout.WriteData(data)

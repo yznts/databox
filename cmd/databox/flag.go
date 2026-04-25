@@ -37,7 +37,7 @@ func flagNowarn(fset *flag.FlagSet) *bool {
 // Data format flags
 
 func flagDsn(fset *flag.FlagSet) *string {
-	return fset.String("dsn", "", "dsn to connect to the database (can be set via DSN/DATABASE/DATABASE_URL/DATABOX env)")
+	return fset.String("dsn", "", "database URL; if empty, uses DSN, DATABASE, DATABASE_URL, or DATABOX env (first non-empty)")
 }
 
 func flagSql(fset *flag.FlagSet) *bool {
