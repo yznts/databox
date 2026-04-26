@@ -56,7 +56,7 @@ func (s *Sqlite) GetColumns(table string) ([]Column, error) {
 	// We can't select exact fields because of 'notnull' issue (syntax error near "notnull").
 	// So, here is a reference column list:
 	// cid, name, type, notnull, dflt_value, pk
-	dataCols, err := s.QueryData(fmt.Sprintf("SELECT * FROM PRAGMA_TABLE_INFO('%s')", table))
+	dataCols, err := s.QueryData("SELECT * FROM PRAGMA_TABLE_INFO(?)", table)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (s *Sqlite) GetColumns(table string) ([]Column, error) {
 	// Same as above, we can't select exact fields because of syntax error.
 	// So, here is a reference column list:
 	// id, seq, table, from, to, on_update, on_delete, match
-	dataFks, err := s.QueryData(fmt.Sprintf("SELECT * FROM PRAGMA_FOREIGN_KEY_LIST('%s')", table))
+	dataFks, err := s.QueryData("SELECT * FROM PRAGMA_FOREIGN_KEY_LIST(?)", table)
 	if err != nil {
 		return nil, err
 	}

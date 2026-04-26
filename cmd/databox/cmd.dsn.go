@@ -95,7 +95,7 @@ func dsnCmd() {
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get current user: %v")
 		user := conv.String(data.Rows[0][0])
 		// Get database size
-		data, err = con.QueryData(fmt.Sprintf("SELECT pg_database_size('%s');", dbName))
+		data, err = con.QueryData("SELECT pg_database_size($1);", dbName)
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get database size: %v")
 		size := conv.Int(data.Rows[0][0])
 		sizeStr := humanize.Bytes(uint64(size))
@@ -104,7 +104,7 @@ func dsnCmd() {
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get table count: %v")
 		tableCount := conv.Int(data.Rows[0][0])
 		// Get active connections
-		data, err = con.QueryData(fmt.Sprintf("SELECT COUNT(*) FROM pg_stat_activity WHERE datname = '%s';", dbName))
+		data, err = con.QueryData("SELECT COUNT(*) FROM pg_stat_activity WHERE datname = $1;", dbName)
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get active connections: %v")
 		activeConns := conv.Int(data.Rows[0][0])
 		// Write resulting information
@@ -133,12 +133,12 @@ func dsnCmd() {
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get current user: %v")
 		user := conv.String(data.Rows[0][0])
 		// Get database size
-		data, err = con.QueryData(fmt.Sprintf("SELECT SUM(data_length + index_length) FROM information_schema.tables WHERE table_schema = '%s';", dbName))
+		data, err = con.QueryData("SELECT SUM(data_length + index_length) FROM information_schema.tables WHERE table_schema = ?;", dbName)
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get database size: %v")
 		size := conv.Int(data.Rows[0][0])
 		sizeStr := humanize.Bytes(uint64(size))
 		// Get table count
-		data, err = con.QueryData(fmt.Sprintf("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '%s';", dbName))
+		data, err = con.QueryData("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ?;", dbName)
 		dio.AssertError(stderr, err, *dsnDebug, "Failed to get table count: %v")
 		tableCount := conv.Int(data.Rows[0][0])
 		// Get active connections

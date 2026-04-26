@@ -54,19 +54,19 @@ func (p *Postgres) GetTables() ([]Table, error) {
 
 func (p *Postgres) GetColumns(table string) ([]Column, error) {
 	// Query the database for the columns
-	dataCols, err := p.QueryData(fmt.Sprintf(`
+	dataCols, err := p.QueryData(`
 		SELECT
 			column_name,
 			data_type,
 			(CASE WHEN is_nullable = 'YES' THEN true ELSE false END) AS is_nullable,
 			column_default
 		FROM information_schema.columns
-		WHERE table_name = '%s'`, table))
+		WHERE table_name = $1`, table)
 	if err != nil {
 		return nil, err
 	}
 	// Query the database for constraints
-	dataCons, err := p.QueryData(fmt.Sprintf(`
+	dataCons, err := p.QueryData(`
 		SELECT DISTINCT
 		    tc.constraint_name,
 		    tc.constraint_type,
@@ -87,8 +87,8 @@ func (p *Postgres) GetColumns(table string) ([]Column, error) {
 			LEFT JOIN information_schema.referential_constraints AS fk
 			  ON fk.constraint_name = tc.constraint_name
 		WHERE
-		     tc.table_name = '%s';
-		`, table))
+		     tc.table_name = $1;
+		`, table)
 	if err != nil {
 		return nil, err
 	}
